@@ -1,0 +1,57 @@
+﻿@page "/admin/catalog"
+
+@inject ProductCommand ProductCommand
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1>Lista dos catálogos</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a class="btn btn-primary" href="/admin/catalog/create">Cadastrar</a>
+    </div>
+</div>
+
+@if (_products == null)
+{
+    <p>Carregando...</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr class="text-uppercase">
+                <th>Id</th>
+                <th>Nome</th>
+                <th>Descrição</th>
+                <th>Tipo</th>
+                <th>Preço</th>
+                <th>Cadastro</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (Product product in _products)
+            {
+                <tr>
+                    <td>@(product.Id)</td>
+                    <td>@(product.Name)</td>
+                    <td>@(product.Description ?? "-")</td>
+                    <td>@(Enum.GetName(product.Type))</td>
+                    <td>@(product.UnitPrice)</td>
+                    <td>@(product.Created.ToShortDateString())</td>
+                    <td><a href="/admin/catalog/detail/@(product.Id)" class="text-primary">Detalhes</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code
+{
+    IEnumerable<Product>? _products;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _products = await ProductCommand.ListAllAsync();
+    }
+}

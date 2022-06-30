@@ -1,0 +1,103 @@
+﻿@page "/checkout/{Code}"
+@using Order = WebUI.Pages.Admin.Order
+
+@inject OrderCommand OrderCommand
+@inject NavigationManager NavigationManager
+
+<h1>Checkout</h1>
+<p>@(OrderCommand.GetCode())</p>
+
+<form class="needs-validation" novalidate="">
+    <hr class="mb-4">
+    <h4 class="mb-3">Forma de pagamento</h4>
+    <div class="d-block my-3">
+        <div class="custom-control custom-radio">
+            <input id="credit" name="paymentMethod" type="radio" class="custom-control-input" checked="" @onchange="() => SetPaymentMethod(PaymentMethodType.Credit)">
+            <label class="custom-control-label" for="credit">Cartão de Crédito</label>
+        </div>
+        <div class="custom-control custom-radio">
+            <input id="debit" name="paymentMethod" type="radio" class="custom-control-input" @onchange="() => SetPaymentMethod(PaymentMethodType.Debit)">
+            <label class="custom-control-label" for="debit">Cartão de Débito</label>
+        </div>
+        <div class="custom-control custom-radio">
+            <input id="pix" name="paymentMethod" type="radio" class="custom-control-input" required="" @onchange="() => SetPaymentMethod(PaymentMethodType.Pix)">
+            <label class="custom-control-label" for="pix">Pix</label>
+        </div>
+    </div>
+    @if (_paymentMethodType == PaymentMethodType.Pix)
+    {
+        
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-3 mb-3">
+                <label for="cc-name">Nome do titular</label>
+                <input type="text" class="form-control" id="cc-name" placeholder="" required="">
+                <small class="text-muted">Nome completo conforme exibido no cartão</small>
+            </div>
+            <div class="col-3 mb-3">
+                <label for="cc-number">Número do Cartão</label>
+                <input type="text" class="form-control" id="cc-number" placeholder="" required="">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-3 mb-3">
+                <label for="cc-expiration">Data expiração</label>
+                <input type="text" class="form-control" id="cc-expiration" placeholder="" required="">
+            </div>
+            <div class="col-3 mb-3">
+                <label for="cc-expiration">CVV</label>
+                <input type="text" class="form-control" id="cc-cvv" placeholder="" required="">
+            </div>
+        </div> 
+    }
+    <hr class="mb-4">
+    <button class="btn btn-primary btn-lg btn-block" type="button" @onclick="async () => await PayAsync()">Pagar @(Currency.StringFormat(OrderCommand.GetTotalValue()))</button>
+    
+</form>
+
+@code
+{
+    [Parameter]
+    public string? Code { get; set; }
+
+    private PaymentMethodType? _paymentMethodType;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(Code))
+            NavigationManager.NavigateTo("/", true);
+        
+        _error = null;
+
+        await LoadAsync();
+        
+        if(OrderCommand.GetStatus() == OrderStatus.Paid);
+        {
+            _error = "This order has already been paid.";
+        }
+        
+        _paymentMethodType = PaymentMethodType.Credit;
+    }
+
+    async Task LoadAsync() => await OrderCommand.GetByCodeAsync(Guid.Parse(Code));
+
+    async Task PayAsync()
+    {
+        OrderCommand.SetStatus(OrderStatus.Paid);
+
+        try
+        {
+            await OrderCommand.CreateOrUpdateAsync();
+            NavigationManager.NavigateTo("/", true);
+        }
+        catch(Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+    
+    void SetPaymentMethod(PaymentMethodType paymentMethodType) => _paymentMethodType = paymentMethodType;
+}

@@ -1,0 +1,51 @@
+﻿@page "/admin"
+@page "/admin/order"
+
+@inject OrderCommand OrderCommand 
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1>Lista dos pedidos</h1>
+</div>
+
+@if (_orders == null)
+{
+    <p>Carregando...</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr class="text-uppercase">
+                <th>Id</th>
+                <th>Codigo</th>
+                <th>Valor total</th>
+                <th>Data</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var order in _orders)
+            {
+                <tr>
+                    <td>@(order.Id)</td>
+                    <td>@(order.Code)</td>
+                    <td>@(Currency.StringFormat(order.TotalValue))</td>
+                    <td>@(order.Created)</td>
+                    <td><a href="/admin/order/detail/@(order.Id)" class="text-primary">Detalhes</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code{
+
+    IEnumerable<Domain.Entities.Order>? _orders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _orders = await OrderCommand.ListAllAsync();
+    }
+}

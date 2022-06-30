@@ -1,0 +1,154 @@
+﻿@page "/admin/catalog/create"
+@page "/admin/catalog/detail/{Id}"
+
+@inject ProductCommand ProductCommand
+@inject NavigationManager NavigationManager
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1>@(string.IsNullOrEmpty(Id) ? "Cadastrar novo produto" : $"{Id} - {_name}") </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" @onclick="async () => await SaveAsync()">
+            Salvar produto
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <form class="needs-validation" novalidate="">
+            <div class="row">
+                <div class="col-6 mb-3">
+                    <label>Nome</label>
+                    <input type="text" class="form-control" @bind="_name">
+                </div>
+                <div class="col-6 mb-3">
+                    <label>Descrição</label>
+                    <input type="text" class="form-control" @bind="_description">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6 mb-3">
+                    <label>Preço</label>
+                    <input type="text" class="form-control" @bind="_unitPrice">
+                </div>
+                <div class="col-6 mb-3">
+                    <label>Tipo do produto</label>
+                    <select class="form-control" @bind="_type">
+                        <option value="" selected="selected" disabled="disabled">Selecione</option>
+                        <option value="Burguer">Lanche</option>
+                        <option value="Combo">Combo</option>
+                        <option value="Dessert">Sobremesa</option>
+                        <option value="Drink">Bebiba</option>
+                    </select>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(Id))
+            {
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label>Cadastrado</label>
+                        <input type="text" class="form-control" @bind="_created" readonly="">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label>Última modificação</label>
+                        <input type="text" class="form-control" @bind="_lastModified" readonly="">
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <p class="text-danger">@(_error)</p>
+            }
+        </form>
+    </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public string? Id { get; set; }
+
+    private string? _name;
+    private string? _description;
+    private string? _unitPrice;
+    private string? _type;
+
+    private DateTime _created;
+    private DateTime? _lastModified;
+
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CleanFields();
+
+        if (!string.IsNullOrEmpty(Id))
+            await LoadAsync();
+    }
+
+    async Task SaveAsync()
+    {
+        var type = ProductType.Burguer;
+
+        if (Enum.GetName(ProductType.Combo) == _type)
+        {
+            type = ProductType.Combo;
+        }
+        else if (Enum.GetName(ProductType.Dessert) == _type)
+        {
+            type = ProductType.Dessert;
+        }
+        else if (Enum.GetName(ProductType.Drink) == _type)
+        {
+            type = ProductType.Drink;
+        }
+
+        var product = new Product(_name ?? string.Empty, Convert.ToDecimal(string.IsNullOrEmpty(_unitPrice) ? "-1" : _unitPrice), type);
+
+        product.SetDescription(_description);
+
+        try
+        {
+            product.ValidateFields();
+
+            if (!string.IsNullOrEmpty(Id))
+                product.Id = Convert.ToInt32(Id);
+
+            await ProductCommand.CreateOrUpdateAsync(product);
+
+            NavigationManager.NavigateTo("/admin/catalog", true);
+            
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    async Task LoadAsync()
+    {
+        Product? product = await ProductCommand.GetAsync(Convert.ToInt32(Id));
+
+        if (product == null)
+        {
+            NavigationManager.NavigateTo("/admin/catalog", true);
+            return;
+        }
+
+        _name = product.Name;
+        _description = product.Description;
+        _type = Enum.GetName(product.Type);
+        _unitPrice = Currency.StringFormatWithoutCurrency(product.UnitPrice);
+        _created = product.Created;
+        _lastModified = product.LastModified;
+    }
+
+    void CleanFields()
+    {
+        _name = null;
+        _description = null;
+        _unitPrice = null;
+        _type = null;
+        _error = null;
+    }
+}

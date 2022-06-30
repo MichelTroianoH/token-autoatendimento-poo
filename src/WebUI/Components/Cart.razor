@@ -1,0 +1,95 @@
+﻿@inject NavigationManager NavigationManager
+
+<div class="top-row navbar navbar-dark">
+    <div class="container-fluid mb-3">
+        <a class="navbar-brand" href="">@(OrderCommand.GetTotalItemCount() == 0 ? "Carrinho vazio" : $"{OrderCommand.GetTotalItemCount()} item(s) no carrinho")</a>
+    </div>
+    <div class="col-12 p-3">
+        <ul class="list-group mb-3">
+            @foreach (OrderItem item in OrderCommand.GetItems())
+            {
+                <li class="list-group-item d-flex justify-content-between lh-condensed">
+                    <div>
+                        <h6 class="my-2">@(item.Product?.Name)</h6>
+                        <small class="text-danger cursor-pointer" @onclick="() => Delete(item)">Excluir</small>
+                    </div>
+                    <span class="text-muted m-auto">
+                        <input type="number" class="form-control " @onchange="(e) => UpdateAmount(item, e)" value="@(item.Amount)"/>
+                    </span>
+                    <span class="text-green" style="margin: auto 0">@(Currency.StringFormat(item.TotalValue))</span>
+                </li>
+            }
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Valor total</span>
+                <strong class="text-green">@(Currency.StringFormat(OrderCommand.GetTotalValue()))</strong>
+            </li>
+        </ul>
+        <form class="card p-2 mb-3">
+            <div class="input-group">
+                <textarea rows="3" class="form-control w-100" placeholder="Observação..." @bind="_obs"></textarea>
+            </div>
+        </form>
+        <form class="card p-2">
+            <div class="input-group">
+                <button type="button" @onclick="async () => await CheckoutAsync()" class="btn btn-secondary w-100">Pagamento <span class="oi oi-arrow-right"></span></button>
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <span class="text-danger py-2 text-center mt-2">@(_error)</span>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@code
+{
+    private string? _obs;
+    private string? _error = null;
+
+    [Parameter]
+    public OrderCommand OrderCommand { get; set; }
+
+    void Delete(OrderItem item)
+    {
+        OrderCommand.RemoveItem(item);
+        OrderCommand.CalculateTotalValue();
+    }
+
+    void UpdateAmount(OrderItem item, ChangeEventArgs e)
+    {
+        var amount = 0;
+
+        if (e.Value != null && (string)e.Value != "")
+            amount = Convert.ToInt32(e.Value);
+
+        OrderCommand.UpdateItem(item, amount);
+        OrderCommand.CalculateTotalValue();
+    }
+
+    async Task CheckoutAsync()
+    {
+        if (OrderCommand.GetTotalItemCount() == 0)
+        {
+            _error = "Add at least one item for checkout.";
+            return;
+        }
+
+        if (OrderCommand.GetTotalValue() == 0)
+        {
+            _error = "Total value cannot be zero.";
+            return;
+        }
+
+        OrderCommand.SetObs(_obs);
+        
+        try
+        {
+            await OrderCommand.CreateOrUpdateAsync();
+            NavigationManager.NavigateTo($"/checkout/{OrderCommand.GetCode()}", true);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+}

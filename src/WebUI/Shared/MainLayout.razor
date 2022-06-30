@@ -1,0 +1,32 @@
+﻿@inherits LayoutComponentBase
+
+@inject NavigationManager NavigationManager
+
+<div class="page">
+    <div class="sidebar">
+        @if (IsAdmin)
+        {
+            <NavMenuAdmin/> 
+        }
+        else
+        {
+            <NavMenu/>    
+        }
+    </div>
+    <main>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code
+{
+    private bool IsAdmin;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        IsAdmin = NavigationManager.Uri.ToLower().Contains("admin");
+        StateHasChanged();
+    }
+}

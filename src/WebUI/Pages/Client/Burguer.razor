@@ -1,0 +1,57 @@
+﻿@page "/"
+@page "/burguer"
+
+@inject ProductCommand ProductCommand
+@inject OrderCommand OrderCommand
+
+<div class="row">
+    <div class="col-7">
+        <h1>Lanches</h1>
+        @if (Catalogs != null)
+        {
+            @foreach (Product catalog in Catalogs)
+            {
+                <div class="media text-muted pt-3">
+                    <div class="media-body pb-3 mb-0 small lh-125 border-bottom border-gray">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <strong class="h4 text-dark cursor-pointer" @onclick="() => AddItem(catalog)">@(catalog.Name)</strong>
+                            <h5 class="text-green">@(Currency.StringFormat(catalog.UnitPrice))</h5>
+                        </div>
+                        <span class="d-block">@(catalog.Description)</span>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p>Carregando...</p>
+        }
+    </div>
+    <div class="col-5" style="margin-top: -18px;">
+        <div class="cartbar">
+            <Cart OrderCommand="OrderCommand"/>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public string? Type { get; set; }
+
+    private IEnumerable<Product>? Catalogs { get; set; }
+    
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (first)
+        {
+            Catalogs = await ProductCommand.ListAllAsync(ProductType.Burguer);
+            StateHasChanged();
+        }
+    }
+    
+    void AddItem(Product product)
+    {
+        OrderCommand.AddItem(product);
+    }
+}
